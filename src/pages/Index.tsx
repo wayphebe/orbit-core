@@ -1,13 +1,17 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Helmet } from 'react-helmet-async';
+import GameCanvas from '@/components/game/GameCanvas';
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      <Helmet>
+        <title>Orbit! - A Game About Connection</title>
+        <meta name="description" content="Orbit! is a cosmic cooperative game where two celestial entities must stay connected through gravity to collect energy fragments and evolve their bond." />
+      </Helmet>
+      <main className="w-full h-screen">
+        <GameCanvas />
+      </main>
+    </>
   );
 };
 
