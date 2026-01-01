@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { useGameLoop } from '@/hooks/useGameLoop';
+import { useMemo, useCallback } from 'react';
+import { useGameLoop, GameEvent } from '@/hooks/useGameLoop';
 import { getDistance } from '@/types/game';
+import { useGameAudio } from '@/contexts/AudioContext';
 import StarField from './StarField';
 import Entity from './Entity';
 import GravityLink from './GravityLink';
@@ -8,7 +9,23 @@ import Fragment from './Fragment';
 import GameUI from './GameUI';
 
 export default function GameCanvas() {
-  const gameState = useGameLoop();
+  const { playSfx } = useGameAudio();
+  
+  const handleGameEvent = useCallback((event: GameEvent) => {
+    switch (event) {
+      case 'collect':
+        playSfx('collect', 0.6);
+        break;
+      case 'clash':
+        playSfx('clash', 0.5);
+        break;
+      case 'broke':
+        playSfx('broke', 0.4);
+        break;
+    }
+  }, [playSfx]);
+  
+  const gameState = useGameLoop({ onEvent: handleGameEvent });
   
   const distance = useMemo(
     () => getDistance(gameState.celu.position, gameState.ak.position),
