@@ -1,6 +1,10 @@
 import { memo } from 'react';
 import { Entity as EntityType, LinkTier } from '@/types/game';
 
+// Import character textures
+import akTexture from '@/assets/ak-texture.png';
+import celuTexture from '@/assets/celu-texture.png';
+
 interface EntityProps {
   entity: EntityType;
   type: 'celu' | 'ak';
@@ -10,6 +14,7 @@ interface EntityProps {
 
 const Entity = memo(function Entity({ entity, type, linkTier, isActive }: EntityProps) {
   const isCelu = type === 'celu';
+  const texture = isCelu ? celuTexture : akTexture;
   
   // Determine glow intensity based on tier
   const getGlowIntensity = () => {
@@ -27,9 +32,8 @@ const Entity = memo(function Entity({ entity, type, linkTier, isActive }: Entity
   const isAscension = linkTier === 'ASCENSION';
   
   // Entity colors
-  const primaryHue = isCelu ? 185 : 38;
-  const primaryColor = `hsl(${primaryHue} 85% ${55 * intensity}%)`;
-  const glowColor = `hsl(${primaryHue} 100% ${65 * intensity}%)`;
+  const primaryHue = isCelu ? 185 : 15;
+  const glowColor = `hsl(${primaryHue} 70% ${55 * intensity}%)`;
   
   return (
     <div
@@ -60,28 +64,27 @@ const Entity = memo(function Entity({ entity, type, linkTier, isActive }: Entity
         <div
           className="absolute rounded-full border transition-opacity duration-300"
           style={{
-            width: 200, // Detection radius * 2
+            width: 200,
             height: 200,
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            borderColor: `${primaryColor}30`,
+            borderColor: `${glowColor}30`,
             borderWidth: 1,
             opacity: isActive ? 0.5 : 0.2,
           }}
         />
       )}
       
-      {/* Core glow */}
+      {/* Core glow behind texture */}
       <div
         className="absolute rounded-full"
         style={{
-          width: entity.size * 1.5,
-          height: entity.size * 1.5,
+          width: entity.size * 1.4,
+          height: entity.size * 1.4,
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
-          background: `radial-gradient(circle, ${primaryColor} 0%, ${primaryColor}80 50%, transparent 100%)`,
           boxShadow: `
             0 0 ${15 * intensity}px ${glowColor}80,
             0 0 ${30 * intensity}px ${glowColor}40,
@@ -90,35 +93,38 @@ const Entity = memo(function Entity({ entity, type, linkTier, isActive }: Entity
         }}
       />
       
-      {/* Inner core */}
+      {/* Character texture */}
       <div
-        className="absolute rounded-full"
+        className="absolute rounded-full overflow-hidden"
         style={{
-          width: entity.size,
-          height: entity.size,
+          width: entity.size * 1.6,
+          height: entity.size * 1.6,
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
-          background: `radial-gradient(circle at 30% 30%, 
-            hsl(${primaryHue} 90% ${80 * intensity}%) 0%, 
-            ${primaryColor} 50%, 
-            hsl(${primaryHue} 80% ${40 * intensity}%) 100%
-          )`,
-          boxShadow: `inset 0 0 ${entity.size / 3}px hsl(${primaryHue} 100% 90% / 0.5)`,
         }}
-      />
+      >
+        <img
+          src={texture}
+          alt={type}
+          className="w-full h-full object-cover"
+          style={{
+            filter: `brightness(${0.7 + intensity * 0.5}) saturate(${0.8 + intensity * 0.4})`,
+          }}
+        />
+      </div>
       
       {/* Center highlight */}
       <div
         className="absolute rounded-full"
         style={{
-          width: entity.size * 0.3,
-          height: entity.size * 0.3,
+          width: entity.size * 0.4,
+          height: entity.size * 0.4,
           left: '50%',
           top: '50%',
-          transform: 'translate(-40%, -40%)',
-          background: `radial-gradient(circle, hsl(${primaryHue} 100% 95%) 0%, transparent 70%)`,
-          opacity: intensity,
+          transform: 'translate(-35%, -35%)',
+          background: `radial-gradient(circle, hsl(0 0% 100% / 0.4) 0%, transparent 70%)`,
+          opacity: intensity * 0.6,
         }}
       />
       
@@ -151,7 +157,7 @@ const Entity = memo(function Entity({ entity, type, linkTier, isActive }: Entity
           left: '50%',
           top: entity.size * 1.8,
           transform: 'translateX(-50%)',
-          color: primaryColor,
+          color: glowColor,
           textShadow: `0 0 10px ${glowColor}`,
           opacity: 0.8,
         }}

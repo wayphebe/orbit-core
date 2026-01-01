@@ -1,6 +1,13 @@
 import { memo, useMemo } from 'react';
 import { Vector2, LinkTier } from '@/types/game';
 
+// Import planet and tile assets
+import planet1 from '@/assets/planet1.png';
+import planet2 from '@/assets/planet2.png';
+import planet3 from '@/assets/planet3.png';
+import tile1 from '@/assets/tile1.png';
+import tile2 from '@/assets/tile2.png';
+
 interface StarFieldProps {
   centerOfMass: Vector2;
   linkTier: LinkTier;
@@ -13,7 +20,15 @@ interface Star {
   size: number;
   opacity: number;
   delay: number;
-  layer: number; // For parallax
+  layer: number;
+}
+
+interface Planet {
+  x: number;
+  y: number;
+  size: number;
+  image: string;
+  layer: number;
 }
 
 function generateStars(count: number): Star[] {
@@ -23,14 +38,47 @@ function generateStars(count: number): Star[] {
     size: 0.5 + Math.random() * 2,
     opacity: 0.1 + Math.random() * 0.5,
     delay: Math.random() * 5,
-    layer: Math.floor(Math.random() * 3), // 0, 1, 2 for different depths
+    layer: Math.floor(Math.random() * 3),
+  }));
+}
+
+const planetImages = [planet1, planet2, planet3];
+
+function generatePlanets(): Planet[] {
+  return [
+    { x: 15, y: 20, size: 80, image: planetImages[0], layer: 0 },
+    { x: 75, y: 15, size: 60, image: planetImages[1], layer: 1 },
+    { x: 85, y: 70, size: 100, image: planetImages[2], layer: 0 },
+    { x: 10, y: 75, size: 50, image: planetImages[1], layer: 2 },
+    { x: 50, y: 85, size: 70, image: planetImages[0], layer: 1 },
+  ];
+}
+
+const tileImages = [tile1, tile2];
+
+interface Tile {
+  x: number;
+  y: number;
+  size: number;
+  image: string;
+  opacity: number;
+}
+
+function generateTiles(): Tile[] {
+  return Array.from({ length: 8 }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: 100 + Math.random() * 150,
+    image: tileImages[Math.floor(Math.random() * tileImages.length)],
+    opacity: 0.15 + Math.random() * 0.2,
   }));
 }
 
 const StarField = memo(function StarField({ centerOfMass, linkTier, energy }: StarFieldProps) {
   const stars = useMemo(() => generateStars(150), []);
+  const planets = useMemo(() => generatePlanets(), []);
+  const tiles = useMemo(() => generateTiles(), []);
   
-  // Calculate brightness based on link tier
   const baseBrightness = useMemo(() => {
     switch (linkTier) {
       case 'SEVERED': return 0.15;
@@ -42,7 +90,6 @@ const StarField = memo(function StarField({ centerOfMass, linkTier, energy }: St
     }
   }, [linkTier]);
 
-  // Parallax offset based on center of mass
   const getParallaxOffset = (layer: number) => {
     const factor = (layer + 1) * 0.02;
     return {
@@ -52,7 +99,7 @@ const StarField = memo(function StarField({ centerOfMass, linkTier, energy }: St
   };
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[hsl(240_20%_4%)]">
       {/* Nebula background layers */}
       <div 
         className="absolute inset-0 transition-opacity duration-1000"
@@ -66,6 +113,61 @@ const StarField = memo(function StarField({ centerOfMass, linkTier, energy }: St
           transform: `translate(${getParallaxOffset(2).x}px, ${getParallaxOffset(2).y}px)`,
         }}
       />
+
+      {/* Background tiles */}
+      {tiles.map((tile, i) => {
+        const offset = getParallaxOffset(0);
+        return (
+          <div
+            key={`tile-${i}`}
+            className="absolute transition-transform duration-100"
+            style={{
+              left: `${tile.x}%`,
+              top: `${tile.y}%`,
+              transform: `translate(${offset.x * 0.5}px, ${offset.y * 0.5}px)`,
+            }}
+          >
+            <img
+              src={tile.image}
+              alt=""
+              style={{
+                width: tile.size,
+                height: tile.size,
+                opacity: tile.opacity * baseBrightness,
+                filter: `brightness(${0.5 + baseBrightness * 0.5})`,
+              }}
+            />
+          </div>
+        );
+      })}
+
+      {/* Planets */}
+      {planets.map((planet, i) => {
+        const offset = getParallaxOffset(planet.layer);
+        return (
+          <div
+            key={`planet-${i}`}
+            className="absolute transition-transform duration-100"
+            style={{
+              left: `${planet.x}%`,
+              top: `${planet.y}%`,
+              transform: `translate(${offset.x}px, ${offset.y}px)`,
+            }}
+          >
+            <img
+              src={planet.image}
+              alt=""
+              className="object-contain"
+              style={{
+                width: planet.size,
+                height: planet.size,
+                opacity: 0.4 + baseBrightness * 0.4,
+                filter: `brightness(${0.6 + baseBrightness * 0.5}) saturate(${0.7 + baseBrightness * 0.5})`,
+              }}
+            />
+          </div>
+        );
+      })}
 
       {/* Star layers */}
       {[0, 1, 2].map((layer) => {

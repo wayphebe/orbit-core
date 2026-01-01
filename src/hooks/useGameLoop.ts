@@ -35,7 +35,15 @@ function createFragment(worldCenter: Vector2): Fragment {
   };
 }
 
-export function useGameLoop() {
+export type GameEvent = 'collect' | 'clash' | 'broke';
+
+interface UseGameLoopOptions {
+  onEvent?: (event: GameEvent) => void;
+}
+
+export function useGameLoop(options?: UseGameLoopOptions) {
+  const { onEvent } = options || {};
+  
   const [gameState, setGameState] = useState<GameState>(() => ({
     celu: {
       position: { x: 400, y: 300 },
@@ -68,6 +76,7 @@ export function useGameLoop() {
 
   const lastSpawnTimeRef = useRef(Date.now());
   const animationFrameRef = useRef<number>();
+  const lastCollisionTimeRef = useRef(0);
 
   // Handle keyboard input
   useEffect(() => {
@@ -159,6 +168,19 @@ export function useGameLoop() {
       // Calculate distance and link status
       const distance = getDistance(newState.celu.position, newState.ak.position);
       const tierConfig = LINK_TIER_CONFIG[prev.linkTier];
+      const now = Date.now();
+
+      // Check for collision (entities too close) - play clash sound
+      if (distance < tierConfig.minDistance && now - lastCollisionTimeRef.current > 500) {
+        lastCollisionTimeRef.current = now;
+        onEvent?.('clash');
+      }
+
+      // Check for link strain (entities at max distance) - play broke sound
+      if (distance > tierConfig.maxDistance * 0.9 && tierConfig.maxDistance !== Infinity && now - lastCollisionTimeRef.current > 1000) {
+        lastCollisionTimeRef.current = now;
+        onEvent?.('broke');
+      }
 
       // Gravitational constraint - pull entities together if too far
       if (distance > tierConfig.maxDistance && tierConfig.maxDistance !== Infinity) {
@@ -195,6 +217,7 @@ export function useGameLoop() {
       const isWithinLimit = distance <= tierConfig.maxDistance || tierConfig.maxDistance === Infinity;
 
       // Update fragments
+      let fragmentCollected = false;
       newState.fragments = prev.fragments.map((fragment) => {
         if (fragment.isCollected) return fragment;
 
@@ -213,6 +236,7 @@ export function useGameLoop() {
         let isCollected = fragment.isCollected;
         if (isActive && distToAk < GAME_CONFIG.akCollectionRadius) {
           isCollected = true;
+          fragmentCollected = true;
         }
 
         // ASCENSION auto-collect
@@ -227,14 +251,20 @@ export function useGameLoop() {
             fragment.position.x += Math.cos(angle) * 3;
             fragment.position.y += Math.sin(angle) * 3;
             isActive = true;
-            if (distToCenter < 30) {
+            if (distToCenter < 30 && !fragment.isCollected) {
               isCollected = true;
+              fragmentCollected = true;
             }
           }
         }
 
         return { ...fragment, isActive, isCollected };
       });
+
+      // Play collect sound
+      if (fragmentCollected) {
+        onEvent?.('collect');
+      }
 
       // Count collected energy
       const collectedCount = newState.fragments.filter((f) => f.isCollected).length;
@@ -244,7 +274,6 @@ export function useGameLoop() {
       }
 
       // Spawn new fragments
-      const now = Date.now();
       if (
         now - lastSpawnTimeRef.current > GAME_CONFIG.fragmentSpawnInterval &&
         newState.fragments.filter((f) => !f.isCollected).length < GAME_CONFIG.maxFragments
@@ -260,7 +289,7 @@ export function useGameLoop() {
     });
 
     animationFrameRef.current = requestAnimationFrame(updateGame);
-  }, []);
+  }, [onEvent]);
 
   // Start game loop
   useEffect(() => {
