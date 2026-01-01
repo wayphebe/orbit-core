@@ -53,7 +53,7 @@ export function useGameLoop(options?: UseGameLoopOptions) {
     ak: {
       position: { x: 500, y: 300 },
       velocity: { x: 0, y: 0 },
-      size: 25,
+      size: 30,
     },
     fragments: [],
     energy: 0,

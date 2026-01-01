@@ -1,7 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { useGameLoop, GameEvent } from '@/hooks/useGameLoop';
 import { getDistance } from '@/types/game';
 import { useGameAudio } from '@/contexts/AudioContext';
+import orbitsMusic from '@/assets/audio/OrbitsMusic.wav';
 import StarField from './StarField';
 import Entity from './Entity';
 import GravityLink from './GravityLink';
@@ -9,7 +10,12 @@ import Fragment from './Fragment';
 import GameUI from './GameUI';
 
 export default function GameCanvas() {
-  const { playSfx } = useGameAudio();
+  const { playSfx, startBgm } = useGameAudio();
+  
+  // Start background music when component mounts
+  useEffect(() => {
+    startBgm(orbitsMusic, 0.3);
+  }, [startBgm]);
   
   const handleGameEvent = useCallback((event: GameEvent) => {
     switch (event) {
@@ -17,10 +23,10 @@ export default function GameCanvas() {
         playSfx('collect', 0.6);
         break;
       case 'clash':
-        playSfx('clash', 0.5);
+        // Sound effect disabled
         break;
       case 'broke':
-        playSfx('broke', 0.4);
+        // Sound effect disabled
         break;
     }
   }, [playSfx]);

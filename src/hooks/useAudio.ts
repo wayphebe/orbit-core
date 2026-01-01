@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 // Import audio files
-import clashSound from '@/assets/audio/clash.wav';
-import brokeSound from '@/assets/audio/broke.wav';
 import collectSound from '@/assets/audio/collect.wav';
+import orbitsMusic from '@/assets/audio/OrbitsMusic.wav';
 
-export type SoundEffect = 'clash' | 'broke' | 'collect';
+export type SoundEffect = 'collect';
 
 const SOUND_MAP: Record<SoundEffect, string> = {
-  clash: clashSound,
-  broke: brokeSound,
   collect: collectSound,
 };
 

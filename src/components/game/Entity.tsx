@@ -95,24 +95,22 @@ const Entity = memo(function Entity({ entity, type, linkTier, isActive }: Entity
       
       {/* Character texture */}
       <div
-        className="absolute rounded-full overflow-hidden"
+        className="absolute"
         style={{
-          width: entity.size * 1.6,
-          height: entity.size * 1.6,
+          width: `${entity.size * 1.6}px`,
+          height: `${entity.size * 1.6}px`,
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
+          borderRadius: '50%',
+          backgroundImage: `url(${texture})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: `brightness(${0.7 + intensity * 0.5}) saturate(${0.8 + intensity * 0.4})`,
+          overflow: 'hidden',
         }}
-      >
-        <img
-          src={texture}
-          alt={type}
-          className="w-full h-full object-cover"
-          style={{
-            filter: `brightness(${0.7 + intensity * 0.5}) saturate(${0.8 + intensity * 0.4})`,
-          }}
-        />
-      </div>
+      />
       
       {/* Center highlight */}
       <div
