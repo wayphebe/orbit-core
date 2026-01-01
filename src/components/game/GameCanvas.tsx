@@ -2,6 +2,7 @@ import { useMemo, useCallback, useEffect } from 'react';
 import { useGameLoop, GameEvent } from '@/hooks/useGameLoop';
 import { getDistance } from '@/types/game';
 import { useGameAudio } from '@/contexts/AudioContext';
+import { useCamera } from '@/hooks/useCamera';
 import orbitsMusic from '@/assets/audio/OrbitsMusic.wav';
 import StarField from './StarField';
 import Entity from './Entity';
@@ -38,11 +39,11 @@ export default function GameCanvas() {
     [gameState.celu.position, gameState.ak.position]
   );
   
-  // Calculate viewport offset to follow center of mass
-  const viewportOffset = useMemo(() => ({
-    x: -gameState.centerOfMass.x + window.innerWidth / 2,
-    y: -gameState.centerOfMass.y + window.innerHeight / 2,
-  }), [gameState.centerOfMass]);
+  // Use new camera system with bounding box following and dynamic scaling
+  const camera = useCamera(
+    gameState.celu.position,
+    gameState.ak.position
+  );
   
   return (
     <div className="relative w-full h-full overflow-hidden cosmic-void">
@@ -53,11 +54,15 @@ export default function GameCanvas() {
         energy={gameState.energy}
       />
       
-      {/* Game world container - follows center of mass */}
+      {/* Game world container - follows bounding box with dynamic scaling */}
       <div 
-        className="absolute inset-0 transition-transform duration-100"
+        className="absolute inset-0"
         style={{
-          transform: `translate(${viewportOffset.x}px, ${viewportOffset.y}px)`,
+          transform: `
+            translate(${camera.offset.x}px, ${camera.offset.y}px) 
+            scale(${camera.scale})
+          `,
+          transformOrigin: 'center center',
         }}
       >
         {/* Gravity link between entities */}

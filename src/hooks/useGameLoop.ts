@@ -44,6 +44,12 @@ interface UseGameLoopOptions {
 export function useGameLoop(options?: UseGameLoopOptions) {
   const { onEvent } = options || {};
   
+  // Store onEvent in a ref to avoid recreating updateGame callback
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
+  
   const [gameState, setGameState] = useState<GameState>(() => ({
     celu: {
       position: { x: 400, y: 300 },
@@ -173,13 +179,13 @@ export function useGameLoop(options?: UseGameLoopOptions) {
       // Check for collision (entities too close) - play clash sound
       if (distance < tierConfig.minDistance && now - lastCollisionTimeRef.current > 500) {
         lastCollisionTimeRef.current = now;
-        onEvent?.('clash');
+        onEventRef.current?.('clash');
       }
 
       // Check for link strain (entities at max distance) - play broke sound
       if (distance > tierConfig.maxDistance * 0.9 && tierConfig.maxDistance !== Infinity && now - lastCollisionTimeRef.current > 1000) {
         lastCollisionTimeRef.current = now;
-        onEvent?.('broke');
+        onEventRef.current?.('broke');
       }
 
       // Gravitational constraint - pull entities together if too far
@@ -263,7 +269,7 @@ export function useGameLoop(options?: UseGameLoopOptions) {
 
       // Play collect sound
       if (fragmentCollected) {
-        onEvent?.('collect');
+        onEventRef.current?.('collect');
       }
 
       // Count collected energy
@@ -289,7 +295,7 @@ export function useGameLoop(options?: UseGameLoopOptions) {
     });
 
     animationFrameRef.current = requestAnimationFrame(updateGame);
-  }, [onEvent]);
+  }, []);
 
   // Start game loop
   useEffect(() => {

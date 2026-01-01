@@ -12,6 +12,8 @@
 - **关卡/节奏**：`docs/systems/levels.md`
 - **数值/平衡**：`docs/systems/balance.md`
 - **世界/地图**：`docs/systems/world_map.md`
+- **摄像机/视口系统（设计）**：`docs/systems/camera_viewport_design.md`
+- **摄像机/视口系统（实现）**：`docs/systems/camera_viewport_implementation.md`
 - **UI/UX**：`docs/systems/ui_ux.md`
 - **叙事**：`docs/systems/narrative.md`
 - **美术**：`docs/systems/art.md`
