@@ -2,8 +2,8 @@ import { memo } from 'react';
 import { Entity as EntityType, LinkTier } from '@/types/game';
 
 // Import character textures
-import akTexture from '@/assets/ak-texture.png';
-import celuTexture from '@/assets/celu-texture.png';
+import akTexture from '@/assets/ak.png';
+import celuTexture from '@/assets/celu.png';
 
 interface EntityProps {
   entity: EntityType;

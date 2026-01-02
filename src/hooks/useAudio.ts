@@ -14,19 +14,27 @@ export function useAudio() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const soundBuffersRef = useRef<Map<SoundEffect, AudioBuffer>>(new Map());
   const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const unlockListenersAttachedRef = useRef(false);
 
   // Initialize audio context and preload sounds
   useEffect(() => {
     const initAudio = async () => {
-      audioContextRef.current = new AudioContext();
+      // Some browsers (notably older Safari) still use webkitAudioContext.
+      const Ctx =
+        (window.AudioContext as typeof AudioContext | undefined) ||
+        ((window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+      audioContextRef.current = Ctx ? new Ctx() : null;
       
       // Preload all sound effects
       for (const [key, url] of Object.entries(SOUND_MAP)) {
         try {
           const response = await fetch(url);
           const arrayBuffer = await response.arrayBuffer();
-          const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-          soundBuffersRef.current.set(key as SoundEffect, audioBuffer);
+          const ctx = audioContextRef.current;
+          if (ctx) {
+            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+            soundBuffersRef.current.set(key as SoundEffect, audioBuffer);
+          }
         } catch (error) {
           console.warn(`Failed to load sound: ${key}`, error);
         }
@@ -39,6 +47,41 @@ export function useAudio() {
       audioContextRef.current?.close();
       bgmRef.current?.pause();
     };
+  }, []);
+
+  const ensureUnlockedOnUserGesture = useCallback(() => {
+    if (unlockListenersAttachedRef.current) return;
+    unlockListenersAttachedRef.current = true;
+
+    const tryUnlock = async () => {
+      // Resume WebAudio (SFX) if needed.
+      const ctx = audioContextRef.current;
+      if (ctx?.state === 'suspended') {
+        try {
+          await ctx.resume();
+        } catch {
+          // ignore
+        }
+      }
+
+      // Start BGM if present.
+      const bgm = bgmRef.current;
+      if (!bgm) return;
+      try {
+        await bgm.play();
+        // Only remove listeners once we actually started playing.
+        for (const evt of ['pointerdown', 'touchstart', 'click', 'keydown'] as const) {
+          document.removeEventListener(evt, tryUnlock);
+        }
+        unlockListenersAttachedRef.current = false;
+      } catch {
+        // Keep listeners; some browsers still reject until specific gesture.
+      }
+    };
+
+    for (const evt of ['pointerdown', 'touchstart', 'click', 'keydown'] as const) {
+      document.addEventListener(evt, tryUnlock);
+    }
   }, []);
 
   // Play sound effect
@@ -73,20 +116,20 @@ export function useAudio() {
     const audio = new Audio(url);
     audio.loop = true;
     audio.volume = volume;
+    audio.preload = 'auto';
     bgmRef.current = audio;
+
+    audio.addEventListener('error', () => {
+      // This is the only reliable signal for 404 / decode failure on HTMLAudioElement.
+      console.warn('BGM failed to load/play', { url, error: audio.error });
+    });
     
     // Try to play (may fail due to autoplay policy)
     audio.play().catch(() => {
-      // Will play on first user interaction
-      const playOnInteract = () => {
-        audio.play();
-        document.removeEventListener('click', playOnInteract);
-        document.removeEventListener('keydown', playOnInteract);
-      };
-      document.addEventListener('click', playOnInteract);
-      document.addEventListener('keydown', playOnInteract);
+      // Will (re)try on first user interaction (mobile-friendly: pointer/touch).
+      ensureUnlockedOnUserGesture();
     });
-  }, []);
+  }, [ensureUnlockedOnUserGesture]);
 
   const stopBgm = useCallback(() => {
     bgmRef.current?.pause();
