@@ -10,6 +10,7 @@ interface GravityLinkProps {
 const GravityLink = memo(function GravityLink({ celuPos, akPos, linkTier }: GravityLinkProps) {
   const distance = getDistance(celuPos, akPos);
   const tierConfig = LINK_TIER_CONFIG[linkTier];
+  const isBroken = distance > tierConfig.linkBreakDistance;
   
   // Calculate strain (how close to max distance)
   const strain = tierConfig.maxDistance === Infinity 
@@ -83,14 +84,14 @@ const GravityLink = memo(function GravityLink({ celuPos, akPos, linkTier }: Grav
   
   // Generate flowing particles along the link
   const particles = useMemo(() => {
-    if (linkTier === 'SEVERED') return [];
+    if (linkTier === 'SEVERED' || isBroken) return [];
     const count = linkTier === 'ASCENSION' ? 8 : linkTier === 'DEEP' ? 5 : 3;
     return Array.from({ length: count }, (_, i) => ({
       offset: i / count,
       size: 3 + (linkTier === 'ASCENSION' ? 2 : 0),
       delay: i * 0.2,
     }));
-  }, [linkTier]);
+  }, [isBroken, linkTier]);
   
   return (
     <svg
@@ -140,7 +141,7 @@ const GravityLink = memo(function GravityLink({ celuPos, akPos, linkTier }: Grav
         strokeWidth={style.width * (1 - strain * 0.3)}
         strokeDasharray={style.dashArray}
         strokeLinecap="round"
-        opacity={style.opacity * (1 - strain * 0.4)}
+        opacity={isBroken ? 0 : style.opacity * (1 - strain * 0.4)}
         filter={strain > 0.8 ? 'url(#strainGlow)' : 'url(#linkGlow)'}
         className={isNearCollapse ? 'animate-collapse-shake' : ''}
       />

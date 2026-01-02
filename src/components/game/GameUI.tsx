@@ -5,14 +5,17 @@ interface GameUIProps {
   energy: number;
   linkTier: LinkTier;
   distance: number;
+  isBroken?: boolean;
+  coherenceTimer?: number | null;
+  hint?: string | null;
 }
 
 const TIER_LABELS: Record<LinkTier, { name: string; description: string }> = {
-  SEVERED: { name: '失联', description: 'Stay close to survive' },
-  NASCENT: { name: '初级', description: 'The bond awakens' },
-  STABLE: { name: '中级', description: '10s coherence buffer' },
-  DEEP: { name: '深度', description: 'Unbreakable connection' },
-  ASCENSION: { name: '终极', description: 'Divine resonance' },
+  SEVERED: { name: '失联', description: '主体性缺失。拉远将崩解。' },
+  NASCENT: { name: '初级', description: '断开即失能。靠近重连。' },
+  STABLE: { name: '中级', description: '断开后仍可行动 10s。' },
+  DEEP: { name: '深度', description: '共享能力：探测 + 收集。' },
+  ASCENSION: { name: '终极', description: '重叠成光源，吸引碎片。' },
 };
 
 const TIER_COLORS: Record<LinkTier, string> = {
@@ -23,9 +26,10 @@ const TIER_COLORS: Record<LinkTier, string> = {
   ASCENSION: 'hsl(50 100% 70%)',
 };
 
-const GameUI = memo(function GameUI({ energy, linkTier, distance }: GameUIProps) {
+const GameUI = memo(function GameUI({ energy, linkTier, distance, isBroken, coherenceTimer, hint }: GameUIProps) {
   const tierInfo = TIER_LABELS[linkTier];
   const tierColor = TIER_COLORS[linkTier];
+  const showCoherence = linkTier === 'STABLE' && Boolean(isBroken) && coherenceTimer !== null && coherenceTimer > 0;
   
   return (
     <>
@@ -56,11 +60,23 @@ const GameUI = memo(function GameUI({ energy, linkTier, distance }: GameUIProps)
         <div className="font-rajdhani text-lg text-foreground/90 mb-1">
           {tierInfo.description}
         </div>
+        {showCoherence && (
+          <div className="mt-1 text-sm text-muted-foreground">
+            相干剩余：<span className="font-mono">{Math.ceil(coherenceTimer! / 1000)}s</span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Distance:</span>
           <span className="font-mono">{Math.round(distance)}px</span>
         </div>
       </div>
+
+      {/* One-shot hint */}
+      {hint && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 ui-panel px-5 py-3 text-sm">
+          {hint}
+        </div>
+      )}
       
       {/* Energy counter */}
       <div className="absolute top-6 left-6 ui-panel p-4">

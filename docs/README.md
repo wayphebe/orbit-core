@@ -7,6 +7,8 @@
 - **GDD（总览）**：`docs/GDD.md`
 - **系统文档**
   - **玩法（核心机制/规则）**：`docs/systems/gameplay.md`
+  - **连接等级（主体性机制 / Tier 规格）**：`docs/systems/link_tiers.md`
+  - **关卡脚本方案（章节关设计与脚本口径）**：`docs/systems/level_scripting.md`
   - **关卡/节奏（目前为无关卡游乐场）**：`docs/systems/levels.md`
   - **数值/平衡**：`docs/systems/balance.md`
   - **世界/地图（相机与空间组织）**：`docs/systems/world_map.md`
@@ -25,7 +27,7 @@
 ## 待确认清单（高优先级）
 
 - **局结构**：是否需要明确的胜利/失败/结算？（目前是无限循环）
-- **STABLE 的 coherence**：10 秒缓冲到底缓冲“什么”？如何可视化？
+- **STABLE 的 coherence**：已确定为“连接断开后仍可维持功能 10s，归零失能”；待落地 UI 倒计时与断开提示文案
 - **目标平台**：PC 键盘为主，还是要兼容移动端/手柄？
 
 

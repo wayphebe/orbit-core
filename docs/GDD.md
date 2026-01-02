@@ -9,6 +9,7 @@
 ## 0. 文档导航
 
 - **玩法系统**：`docs/systems/gameplay.md`
+- **连接等级（主体性机制 / Tier 规格）**：`docs/systems/link_tiers.md`
 - **关卡/节奏**：`docs/systems/levels.md`
 - **数值/平衡**：`docs/systems/balance.md`
 - **世界/地图**：`docs/systems/world_map.md`
@@ -65,7 +66,7 @@
 - 叙事主要通过命名与UI短句呈现：  
   - 标题副题：*A Game About Connection*  
   - Tier 名称：失联/初级/中级/深度/终极  
-  - Tier 描述：*Stay close to survive / The bond awakens / 10s coherence buffer / Unbreakable connection / Divine resonance*
+  - Tier 描述：*Drift too far and collapse / Reconnect to restore your abilities / 10 seconds until you lose your abilities / You both can detect and collect / Overlap to become a light*
 - 角色设定通过配色与职责隐喻：  
   - **Celu（冷青）**：Detector / 发现  
   - **Ak（暖橙）**：Collector / 获取
@@ -143,10 +144,9 @@ Tier 影响（As-Is）：
 - 背景亮度与星空/轨迹氛围（ASCENSION 有额外光晕）。
 - ASCENSION：碎片向质心吸附并自动收集倾向（一定半径内）。
 
-> TODO：`STABLE` 的 “10s coherence buffer” 在代码里尚未实现（只存在字段/配置注释）。需要决定缓冲的具体含义：  
-> - 允许短时间超出 maxDistance 不惩罚？  
-> - 允许短时间失去“碎片激活能力”？  
-> - 允许短时间无视拉回/推开？
+> TODO：`STABLE` 的 coherence 在代码里尚未实现（只存在字段/配置注释）。机制口径已澄清：  
+> - 连接断开后，**功能仍可维持 10s**（倒计时结束失能）  
+> - coherence **不缓冲物理拉回/推开**
 
 ## 7. 美术与氛围（Art & Mood）
 

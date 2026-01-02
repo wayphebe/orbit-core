@@ -84,6 +84,11 @@ Tier 距离配置（`src/types/game.ts`）：
 
 由于 DEEP/ASCENSION 的 `maxDistance = Infinity`，该放行逻辑在现状下等价于冗余，但也暗示了设计意图：高 Tier 可以“无视断联限制”。
 
+> To-Be（已澄清口径）：后续不再用 `maxDistance` 直接 gate 能力，而是引入：
+> - **连接断开（引力线消失）**：`distance > linkBreakDistance` → BROKEN
+> - **主体性（能力可用性）**：由 `agencyState` 决定（NASCENT 断开即失能；STABLE 断开后维持 10s；DEEP 不受距离影响且双方共享能力；ASCENSION 重叠成光源吸引碎片）
+> - **物理推/拉**：`minDistance/maxDistance` 继续只负责“手感张力”，不直接代表能力是否可用
+
 ## 5. Tier 与进度（As-Is）
 
 Energy 计数方式：
@@ -102,6 +107,17 @@ Tier 影响（玩法层）：
 
 - `maxDistance` 增大直至无穷（DEEP 起自由度显著提升）
 - ASCENSION 进入“自动吸附/自动收集”倾向（见下节）
+
+> To-Be（已澄清口径）：
+> - **SEVERED**：主体性缺失，并存在失败判定
+> - **NASCENT / STABLE / DEEP**：距离拉远后，引力线断开/消失（BROKEN）
+> - **NASCENT**：断开即失去各自功能（但游戏继续；提示必须重连）
+> - **STABLE**：断开后功能维持 10s；倒计时结束失去现有功能（文案：10 秒后将失去现有功能）
+> - **DEEP**：双方共享能力：现在都可以探测和收集（即使断开）
+> - **ASCENSION**：两者重叠后成为光源，吸引碎片
+
+> To-Be：本项目后续的“关卡化/叙事化”核心，不是单纯调大 `maxDistance`，而是让 **距离决定主体性（功能可用性）**。  
+> 详见：`docs/systems/link_tiers.md`
 
 ## 6. ASCENSION 自动收集（As-Is）
 
@@ -128,22 +144,23 @@ TODO（建议优先级高）：
   - 失败：断联/坍缩触发惩罚与重置
   - 评分：以时间/碰撞/拉回次数作为表现指标
 
-## 8. STABLE coherence（现状缺口）
+## 8. STABLE coherence（现状缺口 → 已定规格）
 
 代码存在：
 
 - `GameState.coherenceTimer`
 - `LINK_TIER_CONFIG.STABLE.hasCoherence/coherenceDuration=10000`
-- UI 文案写了 “10s coherence buffer”
+- UI 文案（旧）写了 “10s coherence buffer”（建议更新为：**相干 10s：10 秒后将失去现有功能。**）
 
 但逻辑尚未实现。
 
-TODO（定义问题）：
+To-Be（已澄清口径）：
 
-- coherence 要缓冲“什么”？
-  - 缓冲超距（maxDistance）？
-  - 缓冲失去激活能力？
-  - 缓冲拉回/推开的强度？
-- coherence 的 UI 表现是什么（计时条？闪烁？音效）？
+- 触发：当连接断开（引力线消失 / `linkState = BROKEN`）
+- 规则：**功能仍可维持 10s**；倒计时结束 → **失去现有功能**（需要重连）
+- 约束：coherence **只缓冲功能，不缓冲物理拉回/推开**
+- UI 文案（简化）：**相干 10s：10 秒后将失去现有功能。**
+
+完整机制规格与状态机见：`docs/systems/link_tiers.md`
 
 

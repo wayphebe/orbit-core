@@ -7,7 +7,7 @@
 - 标题：**ORBIT!**
 - 副主题：*A Game About Connection*
 - Tier 名称（中/英混合语境里已偏中文）：失联 / 初级 / 中级 / 深度 / 终极
-- Tier 描述（英文短句）：例如 *The bond awakens*、*Divine resonance*
+- Tier 描述（英文短句，建议与机制直连）：例如 *Reconnect to restore your abilities*、*10 seconds until you lose your abilities*、*You both can detect and collect*、*Overlap to become a light*
 
 角色的“故事”更多是职责隐喻：
 

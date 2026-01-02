@@ -18,6 +18,8 @@ export interface Fragment {
 
 export type LinkTier = 'SEVERED' | 'NASCENT' | 'STABLE' | 'DEEP' | 'ASCENSION';
 
+export type RunStatus = 'playing' | 'failed' | 'won';
+
 export interface GameState {
   celu: Entity;
   ak: Entity;
@@ -26,6 +28,13 @@ export interface GameState {
   linkTier: LinkTier;
   coherenceTimer: number | null; // For STABLE tier's 10s buffer
   isPlaying: boolean;
+  runStatus: RunStatus;
+  runTimeMs: number;
+  linkedTimeMs: number;
+  brokenTimeMs: number;
+  clashCount: number;
+  brokeCount: number;
+  hasOverlappedOnce: boolean;
   centerOfMass: Vector2;
 }
 
@@ -44,18 +53,28 @@ export const LINK_TIER_CONFIG = {
   SEVERED: {
     maxDistance: 80,
     minDistance: 20,
+    // UX defaults (see docs/systems/link_tiers.md)
+    linkBreakDistance: 70,
+    severedFailureDistance: 95,
+    overlapDistance: null,
     hasCoherence: false,
     autoCollect: false,
   },
   NASCENT: {
     maxDistance: 150,
     minDistance: 30,
+    linkBreakDistance: 120,
+    severedFailureDistance: null,
+    overlapDistance: null,
     hasCoherence: false,
     autoCollect: false,
   },
   STABLE: {
     maxDistance: 250,
     minDistance: 30,
+    linkBreakDistance: 200,
+    severedFailureDistance: null,
+    overlapDistance: null,
     hasCoherence: true,
     coherenceDuration: 10000, // 10 seconds
     autoCollect: false,
@@ -63,12 +82,18 @@ export const LINK_TIER_CONFIG = {
   DEEP: {
     maxDistance: Infinity,
     minDistance: 30,
+    linkBreakDistance: 240,
+    severedFailureDistance: null,
+    overlapDistance: null,
     hasCoherence: false,
     autoCollect: false,
   },
   ASCENSION: {
     maxDistance: Infinity,
     minDistance: 30,
+    linkBreakDistance: 240,
+    severedFailureDistance: null,
+    overlapDistance: 40,
     hasCoherence: false,
     autoCollect: true,
     collectRadius: 200,
