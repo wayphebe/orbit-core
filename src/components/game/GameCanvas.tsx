@@ -8,6 +8,7 @@ import Entity from './Entity';
 import GravityLink from './GravityLink';
 import Fragment from './Fragment';
 import GameUI from './GameUI';
+import BlackHole from './BlackHole';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,7 +101,13 @@ export default function GameCanvas() {
           celuPos={gameState.celu.position}
           akPos={gameState.ak.position}
           linkTier={gameState.linkTier}
+          overrides={gameState.overrides}
         />
+        
+        {/* Black hole (DEEP only) */}
+        {gameState.blackHole && (
+          <BlackHole blackHole={gameState.blackHole} />
+        )}
         
         {/* Energy fragments */}
         {gameState.fragments.map((fragment) => (
@@ -154,9 +161,9 @@ export default function GameCanvas() {
             <AlertDialogTitle>升华完成</AlertDialogTitle>
             <AlertDialogDescription>
               本局结算：Collect {gameState.energy}，协作稳定度 {stability}/100，用时 {durationSec}s。
-              <div className="mt-2 text-sm text-muted-foreground">
+              <span className="block mt-2 text-sm text-muted-foreground">
                 Broken {(gameState.brokenTimeMs / Math.max(1, gameState.runTimeMs) * 100).toFixed(0)}% · Clash {gameState.clashCount} · Broke {gameState.brokeCount}
-              </div>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

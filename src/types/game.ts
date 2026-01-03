@@ -20,6 +20,44 @@ export type LinkTier = 'SEVERED' | 'NASCENT' | 'STABLE' | 'DEEP' | 'ASCENSION';
 
 export type RunStatus = 'playing' | 'failed' | 'won';
 
+export type BlackHolePhase = 'INACTIVE' | 'ACTIVE' | 'CAPTURED' | 'COOLDOWN';
+
+export type CapturedWho = 'celu' | 'ak' | null;
+
+export interface BlackHoleState {
+  phase: BlackHolePhase;
+  position: Vector2;
+  captured: CapturedWho;
+  tension: number; // 0..1
+  cooldownMs: number;
+  rescues: number;
+  capturedAngle?: number; // For orbital motion accumulation
+}
+
+export interface BlackHoleConfig {
+  influenceRadius: number;
+  captureRadius: number;
+  safeRadius: number;
+  pullStrength: number;
+  pullClamp: number;
+  diskInnerRadius: number;
+  diskOuterRadius: number;
+  captureAngularSpeed: number;
+  captureControlScale: number;
+  speedThreshold: number;
+  distanceThreshold: number;
+  tensionRate: number; // per second
+  ejectImpulse: number;
+  cooldownMs: number;
+  spawnDelayMs: number;
+  spawnJitterRadius: { min: number; max: number };
+}
+
+export interface GameOverrides {
+  linkBreakDistance?: number | null; // null = use tier default, number = override, Infinity = never break
+  maxDistancePullScale?: number; // 0 = disable pull, 1 = normal, >1 = stronger
+}
+
 export interface GameState {
   celu: Entity;
   ak: Entity;
@@ -36,6 +74,8 @@ export interface GameState {
   brokeCount: number;
   hasOverlappedOnce: boolean;
   centerOfMass: Vector2;
+  blackHole: BlackHoleState | null;
+  overrides: GameOverrides; // Runtime overrides (e.g., black hole event window)
 }
 
 export interface KeyState {
@@ -118,3 +158,23 @@ export function getCenterOfMass(a: Vector2, b: Vector2): Vector2 {
     y: (a.y + b.y) / 2,
   };
 }
+
+// Black hole default config (tuned for 30-60s rescue experience)
+export const BLACK_HOLE_CONFIG: BlackHoleConfig = {
+  influenceRadius: 300,
+  captureRadius: 120,
+  safeRadius: 200,
+  pullStrength: 0.15,
+  pullClamp: 2.0,
+  diskInnerRadius: 80,
+  diskOuterRadius: 150,
+  captureAngularSpeed: 0.08,
+  captureControlScale: 0.3,
+  speedThreshold: 2.5,
+  distanceThreshold: 180,
+  tensionRate: 0.4, // per second (2.5s to fill)
+  ejectImpulse: 8.0,
+  cooldownMs: 2000,
+  spawnDelayMs: 10000,
+  spawnJitterRadius: { min: 120, max: 220 },
+};

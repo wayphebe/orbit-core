@@ -5,12 +5,17 @@ interface GravityLinkProps {
   celuPos: Vector2;
   akPos: Vector2;
   linkTier: LinkTier;
+  overrides?: { linkBreakDistance?: number | null };
 }
 
-const GravityLink = memo(function GravityLink({ celuPos, akPos, linkTier }: GravityLinkProps) {
+const GravityLink = memo(function GravityLink({ celuPos, akPos, linkTier, overrides }: GravityLinkProps) {
   const distance = getDistance(celuPos, akPos);
   const tierConfig = LINK_TIER_CONFIG[linkTier];
-  const isBroken = distance > tierConfig.linkBreakDistance;
+  const effectiveLinkBreakDistance = 
+    overrides?.linkBreakDistance !== undefined && overrides.linkBreakDistance !== null
+      ? overrides.linkBreakDistance
+      : tierConfig.linkBreakDistance;
+  const isBroken = effectiveLinkBreakDistance !== Infinity && distance > effectiveLinkBreakDistance;
   
   // Calculate strain (how close to max distance)
   const strain = tierConfig.maxDistance === Infinity 

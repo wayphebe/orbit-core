@@ -8,6 +8,11 @@ import {
   getCenterOfMass,
   LINK_TIER_CONFIG,
   Vector2,
+  BlackHoleState,
+  BlackHoleConfig,
+  BLACK_HOLE_CONFIG,
+  CapturedWho,
+  GameOverrides,
 } from '@/types/game';
 
 const GAME_CONFIG = {
@@ -23,6 +28,172 @@ const GAME_CONFIG = {
 
 // UX: give players a brief moment to react before SEVERED can fail
 const SEVERED_FAIL_GRACE_MS = 1500;
+
+// Black hole system helpers
+function updateBlackHole(
+  prev: GameState,
+  newState: GameState,
+  dt: number,
+  config: BlackHoleConfig,
+  deepEntryTimeMs: number | null,
+  canSpawn: boolean
+): BlackHoleState | null {
+  const isDeep = prev.linkTier === 'DEEP';
+
+  // Only enable in DEEP
+  if (!isDeep) {
+    return null;
+  }
+
+  // Spawn after delay (Milestone 5: only once per DEEP entry)
+  const timeSinceDeep = deepEntryTimeMs !== null ? prev.runTimeMs - deepEntryTimeMs : prev.runTimeMs;
+  const shouldSpawn = timeSinceDeep >= config.spawnDelayMs && canSpawn;
+  if (!shouldSpawn && !prev.blackHole) {
+    return null;
+  }
+
+  // Initialize black hole
+  let bh: BlackHoleState;
+  if (!prev.blackHole) {
+    const angle = Math.random() * Math.PI * 2;
+    const jitter = config.spawnJitterRadius.min + Math.random() * (config.spawnJitterRadius.max - config.spawnJitterRadius.min);
+    bh = {
+      phase: 'ACTIVE',
+      position: {
+        x: prev.centerOfMass.x + Math.cos(angle) * jitter,
+        y: prev.centerOfMass.y + Math.sin(angle) * jitter,
+      },
+      captured: null,
+      tension: 0,
+      cooldownMs: 0,
+      rescues: 0,
+      capturedAngle: undefined,
+    };
+  } else {
+    bh = { ...prev.blackHole };
+  }
+
+  // Update cooldown
+  if (bh.cooldownMs > 0) {
+    bh.cooldownMs = Math.max(0, bh.cooldownMs - dt);
+    if (bh.cooldownMs === 0 && bh.phase === 'COOLDOWN') {
+      bh.phase = 'ACTIVE';
+    }
+  }
+
+  const dtSeconds = dt / 1000;
+
+  // Calculate distances
+  const distCelu = getDistance(newState.celu.position, bh.position);
+  const distAk = getDistance(newState.ak.position, bh.position);
+
+  // Apply influence (pull force)
+  const applyInfluence = (entity: typeof newState.celu, dist: number) => {
+    if (dist < config.influenceRadius && bh.phase !== 'COOLDOWN') {
+      const dir = {
+        x: (bh.position.x - entity.position.x) / dist,
+        y: (bh.position.y - entity.position.y) / dist,
+      };
+      const falloff = 1 - (dist / config.influenceRadius);
+      const strength = config.pullStrength * falloff;
+      const accel = Math.min(strength, config.pullClamp);
+      entity.velocity.x += dir.x * accel * dtSeconds * 60; // normalize to 60fps
+      entity.velocity.y += dir.y * accel * dtSeconds * 60;
+    }
+  };
+
+  // Prevent dual capture: if one is captured, push the other away from capture radius
+  if (bh.captured !== null) {
+    const other = bh.captured === 'celu' ? newState.ak : newState.celu;
+    const otherDist = bh.captured === 'celu' ? distAk : distCelu;
+    if (otherDist < config.captureRadius) {
+      const dir = {
+        x: (other.position.x - bh.position.x) / otherDist,
+        y: (other.position.y - bh.position.y) / otherDist,
+      };
+      const pushStrength = (config.captureRadius - otherDist) * 0.2;
+      other.velocity.x += dir.x * pushStrength;
+      other.velocity.y += dir.y * pushStrength;
+    }
+  }
+
+  // Capture logic
+  if (bh.phase === 'ACTIVE' && bh.cooldownMs === 0 && bh.captured === null) {
+    if (distCelu < config.captureRadius) {
+      bh.phase = 'CAPTURED';
+      bh.captured = 'celu';
+      bh.capturedAngle = Math.atan2(newState.celu.position.y - bh.position.y, newState.celu.position.x - bh.position.x);
+    } else if (distAk < config.captureRadius) {
+      bh.phase = 'CAPTURED';
+      bh.captured = 'ak';
+      bh.capturedAngle = Math.atan2(newState.ak.position.y - bh.position.y, newState.ak.position.x - bh.position.x);
+    }
+  }
+
+  // Lock to accretion disk (if captured)
+  if (bh.phase === 'CAPTURED' && bh.captured !== null && bh.capturedAngle !== undefined) {
+    const captured = bh.captured === 'celu' ? newState.celu : newState.ak;
+    const dist = bh.captured === 'celu' ? distCelu : distAk;
+    
+    // Project to disk ring
+    const targetRadius = (config.diskInnerRadius + config.diskOuterRadius) / 2;
+    const clampedRadius = Math.max(config.diskInnerRadius, Math.min(config.diskOuterRadius, dist));
+    
+    // Allow slight radial struggle (captureControlScale)
+    const radialInput = config.captureControlScale;
+    const finalRadius = clampedRadius + (dist - clampedRadius) * radialInput;
+    
+    // Angular motion (accumulate angle from stored state)
+    const angularSpeed = config.captureAngularSpeed;
+    bh.capturedAngle = bh.capturedAngle + angularSpeed * dtSeconds;
+    
+    // Update position to orbit
+    captured.position.x = bh.position.x + Math.cos(bh.capturedAngle) * finalRadius;
+    captured.position.y = bh.position.y + Math.sin(bh.capturedAngle) * finalRadius;
+    
+    // Update velocity to match orbital motion (tangential)
+    const tangent = { x: -Math.sin(bh.capturedAngle), y: Math.cos(bh.capturedAngle) };
+    const speed = finalRadius * angularSpeed;
+    captured.velocity.x = tangent.x * speed;
+    captured.velocity.y = tangent.y * speed;
+  }
+
+  // Tension accumulation (Milestone 3)
+  if (bh.phase === 'CAPTURED' && bh.captured !== null) {
+    const outer = bh.captured === 'celu' ? newState.ak : newState.celu;
+    const outerSpeed = Math.sqrt(outer.velocity.x ** 2 + outer.velocity.y ** 2);
+    const linkDist = getDistance(newState.celu.position, newState.ak.position);
+    
+    if (outerSpeed >= config.speedThreshold && linkDist >= config.distanceThreshold) {
+      bh.tension = Math.min(1.0, bh.tension + config.tensionRate * dtSeconds);
+    }
+    
+    // Release (tension full)
+    if (bh.tension >= 1.0) {
+      const captured = bh.captured === 'celu' ? newState.celu : newState.ak;
+      const ejectAngle = Math.atan2(captured.position.y - bh.position.y, captured.position.x - bh.position.x);
+      captured.velocity.x += Math.cos(ejectAngle) * config.ejectImpulse;
+      captured.velocity.y += Math.sin(ejectAngle) * config.ejectImpulse;
+      
+      bh.phase = 'COOLDOWN';
+      bh.captured = null;
+      bh.capturedAngle = undefined;
+      bh.tension = 0;
+      bh.cooldownMs = config.cooldownMs;
+      bh.rescues += 1;
+    }
+  }
+
+  // Apply influence to both (if not captured)
+  if (bh.phase === 'ACTIVE' || (bh.phase === 'CAPTURED' && bh.captured === 'celu')) {
+    applyInfluence(newState.ak, distAk);
+  }
+  if (bh.phase === 'ACTIVE' || (bh.phase === 'CAPTURED' && bh.captured === 'ak')) {
+    applyInfluence(newState.celu, distCelu);
+  }
+
+  return bh;
+}
 
 function createFragment(worldCenter: Vector2): Fragment {
   const angle = Math.random() * Math.PI * 2;
@@ -79,6 +250,8 @@ export function useGameLoop(options?: UseGameLoopOptions) {
       brokeCount: 0,
       hasOverlappedOnce: false,
       centerOfMass: getCenterOfMass(celu.position, ak.position),
+      blackHole: null,
+      overrides: {},
     };
 
     return {
@@ -105,6 +278,8 @@ export function useGameLoop(options?: UseGameLoopOptions) {
   const lastClashTimeRef = useRef(0);
   const lastBrokeTimeRef = useRef(0);
   const lastUpdateTimeRef = useRef(Date.now());
+  const deepEntryTimeRef = useRef<number | null>(null);
+  const blackHoleSpawnedThisDeepRef = useRef(false);
 
   // Handle keyboard input
   useEffect(() => {
@@ -201,7 +376,13 @@ export function useGameLoop(options?: UseGameLoopOptions) {
 
       const distance = getDistance(newState.celu.position, newState.ak.position);
       const tierConfig = LINK_TIER_CONFIG[prev.linkTier];
-      const isBroken = distance > tierConfig.linkBreakDistance;
+      
+      // Apply overrides for link break distance (Milestone 4)
+      const effectiveLinkBreakDistance = 
+        newState.overrides.linkBreakDistance !== undefined && newState.overrides.linkBreakDistance !== null
+          ? newState.overrides.linkBreakDistance
+          : tierConfig.linkBreakDistance;
+      const isBroken = effectiveLinkBreakDistance !== Infinity && distance > effectiveLinkBreakDistance;
 
       // Run stats (v1)
       newState.runTimeMs = prev.runTimeMs + dt;
@@ -239,13 +420,16 @@ export function useGameLoop(options?: UseGameLoopOptions) {
         onEvent?.('broke');
       }
 
-      // Gravitational constraint - pull entities together if too far
-      if (distance > tierConfig.maxDistance && tierConfig.maxDistance !== Infinity) {
+      // Gravitational constraint - pull entities together if too far (Milestone 4: respect overrides)
+      const pullScale = newState.overrides.maxDistancePullScale !== undefined 
+        ? newState.overrides.maxDistancePullScale 
+        : 1.0;
+      if (pullScale > 0 && distance > tierConfig.maxDistance && tierConfig.maxDistance !== Infinity) {
         const angle = Math.atan2(
           newState.ak.position.y - newState.celu.position.y,
           newState.ak.position.x - newState.celu.position.x
         );
-        const pullStrength = (distance - tierConfig.maxDistance) * 0.05;
+        const pullStrength = (distance - tierConfig.maxDistance) * 0.05 * pullScale;
         
         newState.celu.velocity.x += Math.cos(angle) * pullStrength;
         newState.celu.velocity.y += Math.sin(angle) * pullStrength;
@@ -269,6 +453,46 @@ export function useGameLoop(options?: UseGameLoopOptions) {
 
       // Update center of mass
       newState.centerOfMass = getCenterOfMass(newState.celu.position, newState.ak.position);
+
+      // Track DEEP entry time (Milestone 5: ensure event only spawns once per DEEP entry)
+      if (prev.linkTier !== 'DEEP' && newState.linkTier === 'DEEP') {
+        deepEntryTimeRef.current = prev.runTimeMs;
+        blackHoleSpawnedThisDeepRef.current = false; // Reset spawn flag on new DEEP entry
+      } else if (newState.linkTier !== 'DEEP') {
+        deepEntryTimeRef.current = null;
+        blackHoleSpawnedThisDeepRef.current = false;
+        // Clear overrides when leaving DEEP
+        newState.overrides = {};
+      }
+
+      // Black hole system (Milestone 1-3)
+      const canSpawn = !blackHoleSpawnedThisDeepRef.current;
+      newState.blackHole = updateBlackHole(prev, newState, dt, BLACK_HOLE_CONFIG, deepEntryTimeRef.current, canSpawn);
+      if (newState.blackHole && !blackHoleSpawnedThisDeepRef.current) {
+        blackHoleSpawnedThisDeepRef.current = true;
+      }
+
+      // Milestone 4: Apply overrides during black hole event window
+      // Milestone 4 & 5: Apply overrides during event, despawn when complete
+      if (newState.blackHole) {
+        if (newState.blackHole.rescues >= 2) {
+          // Milestone 5: Event complete - despawn black hole
+          newState.blackHole = null;
+          newState.overrides = {};
+        } else if (newState.blackHole.phase !== 'INACTIVE') {
+          // Milestone 4: Event active - apply overrides
+          newState.overrides = {
+            linkBreakDistance: Infinity, // Link always visible during rescue
+            maxDistancePullScale: 0, // Disable maxDistance pull to avoid force conflicts
+          };
+        } else {
+          // Event inactive: clear overrides
+          newState.overrides = {};
+        }
+      } else {
+        // No black hole: clear overrides
+        newState.overrides = {};
+      }
 
       // Functional availability (v1)
       let coherenceTimer = prev.coherenceTimer;

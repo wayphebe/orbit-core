@@ -9,6 +9,8 @@
   - **玩法（核心机制/规则）**：`docs/systems/gameplay.md`
   - **连接等级（主体性机制 / Tier 规格）**：`docs/systems/link_tiers.md`
   - **关卡脚本方案（章节关设计与脚本口径）**：`docs/systems/level_scripting.md`
+  - **Delta GDD：DEEP 黑洞关（差异化说明书）**：`docs/delta_gdd_blackhole_deep.md`
+  - **Technical Specs：DEEP 黑洞关（接口/事件/数据结构）**：`docs/technical_specs_blackhole_deep.md`
   - **关卡/节奏（目前为无关卡游乐场）**：`docs/systems/levels.md`
   - **数值/平衡**：`docs/systems/balance.md`
   - **世界/地图（相机与空间组织）**：`docs/systems/world_map.md`
